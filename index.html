@@ -1,72 +1,181 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Is it ok to use AI for art without citing the tool?</title>
-    <!-- Load TF.js and Teachable Machine image library -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
-    <style>
-      video { width: 300px; height: auto; }
-    </style>
-  </head>
-  <body>
-    <h1>Is it ok to use AI to generate art?</h1>
-    <h2>Give a thumbs up for Yes or a thumbs down for No</h2>
-    <button onclick="init()">Start</button>
-    <div>
+<head>
+  <title>Is it ok to use AI for art without citing the tool?</title>
+  <!-- Load TF.js and Teachable Machine image library -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.9.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:600,400&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      font-family: 'Montserrat', sans-serif;
+      color: #222;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-top: 2rem;
+      font-weight: 600;
+      text-align: center;
+      color: #3f0d3f;
+      letter-spacing: 0.01em;
+    }
+    h2 {
+      font-size: 1.2rem;
+      color: #8054a0;
+      font-weight: 600;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    #main-container {
+      background: rgba(255,255,255,0.92);
+      border-radius: 1.2rem;
+      box-shadow: 0 8px 30px rgba(73,55,105,0.12);
+      padding: 2.2rem 2rem 1.8rem 2rem;
+      margin-top: 2rem;
+      max-width: 440px;
+      width: 95vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    video, canvas {
+      width: 320px; 
+      border-radius: 1rem;
+      box-shadow: 0 2px 8px rgba(40,10,60,0.12);
+      margin-bottom: 1rem;
+      background: #f3e7ff;
+    }
+    button {
+      background: linear-gradient(90deg, #8054a0 10%, #e7767b 90%);
+      color: #fff;
+      border: none;
+      border-radius: 2rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+      padding: 0.75rem 2.25rem;
+      box-shadow: 0 8px 32px rgba(146,81,255,0.11);
+      cursor: pointer;
+      margin-bottom: 1.3rem;
+      transition: transform 0.12s, background 0.34s;
+    }
+    button:hover, button:active {
+      transform: scale(1.045);
+      background: linear-gradient(90deg, #6f35a2 0%, #f58494 100%);
+    }
+    #label-container {
+      margin: 1.1rem 0 0.6rem 0;
+      width: 100%;
+    }
+    #label-container div {
+      font-size: 1.07rem;
+      background: #f8f6fc;
+      margin: 0.22em;
+      padding: 0.28em 0.6em;
+      border-radius: 0.4em;
+      text-align: left;
+      color: #7c5dc9;
+      font-weight: 500;
+      transition: background .2s;
+    }
+    #feedback-message {
+      font-size: 1.13rem;
+      color: #5a3f70;
+      font-weight: 600;
+      margin: 1rem 0 0.5rem 0;
+      text-align: center;
+      min-height: 22px;
+      letter-spacing: 0.01em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Is it OK to use AI to generate art?</h1>
+  <h2>Give a thumbs up for Yes or a thumbs down for No</h2>
+  <div id="main-container">
+    <button id="start-button" onclick="init()" >Start</button>
+    <div id="video-container">
       <video id="webcam" autoplay playsinline></video>
-      <div id="label-container"></div>
     </div>
+    <div id="label-container"></div>
+    <div id="feedback-message"></div>
+  </div>
 
-    <script type="text/javascript">
-      const URL = "./model/";
-      let model, webcam, labelContainer, maxPredictions;
+  <script type="text/javascript">
+    const URL = "./model/";
+    let model, webcam, labelContainer, maxPredictions;
+    let predictionMade = false; // prevent multiple redirects
 
-      async function init() {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
+    async function init() {
+      document.getElementById('start-button').disabled = true;
+      document.getElementById('start-button').innerText = "Loading...";
+      const modelURL = URL + "model.json";
+      const metadataURL = URL + "metadata.json";
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
 
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
+      // Setup webcam
+      const flip = true;
+      webcam = new tmImage.Webcam(320, 320, flip);
+      await webcam.setup();
+      await webcam.play();
+      window.requestAnimationFrame(loop);
 
-        // Setup webcam
-        const flip = true;
-        webcam = new tmImage.Webcam(300, 300, flip);
-        await webcam.setup(); // ask for permission
-        await webcam.play();
-        window.requestAnimationFrame(loop);
-
-        document.getElementById("webcam").replaceWith(webcam.canvas);
-        labelContainer = document.getElementById("label-container");
-        for (let i = 0; i < maxPredictions; i++) {
-          labelContainer.appendChild(document.createElement("div"));
-        }
+      // Replace video with webcam canvas
+      const vidCont = document.getElementById("video-container");
+      vidCont.innerHTML = "";
+      vidCont.appendChild(webcam.canvas);
+      labelContainer = document.getElementById("label-container");
+      labelContainer.innerHTML = "";
+      for (let i = 0; i < maxPredictions; i++) {
+        labelContainer.appendChild(document.createElement("div"));
       }
+      document.getElementById('start-button').style.display = 'none';
+    }
 
-      async function loop() {
+    async function loop() {
+      if (!predictionMade) {
         webcam.update();
         await predict();
         window.requestAnimationFrame(loop);
       }
+    }
 
-      async function predict() {
-        const prediction = await model.predict(webcam.canvas);
-        for (let i = 0; i < maxPredictions; i++) {
-          const className = prediction[i].className;
-          const prob = prediction[i].probability.toFixed(2);
-          labelContainer.childNodes[i].innerHTML = `${className}: ${prob}`;
-        }
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
-        // Redirect based on prediction threshold
-        const yesPred = prediction.find(p => p.className.toLowerCase() === "yes");
-        const noPred = prediction.find(p => p.className.toLowerCase() === "no");
-
-        if (yesPred && yesPred.probability > 0.95) {
-          window.location.href = "yes.html";
-        } else if (noPred && noPred.probability > 0.95) {
-          window.location.href = "no.html";
-        }
+    async function predict() {
+      const prediction = await model.predict(webcam.canvas);
+      for (let i = 0; i < maxPredictions; i++) {
+        const className = prediction[i].className;
+        const prob = prediction[i].probability.toFixed(2);
+        labelContainer.childNodes[i].innerHTML = `${className}: <b>${(prob*100).toFixed(1)}%</b>`;
       }
-    </script>
-  </body>
+
+      // Check for prediction
+      const yesPred = prediction.find(p => p.className.toLowerCase() === "yes");
+      const noPred = prediction.find(p => p.className.toLowerCase() === "no");
+      const msgEl = document.getElementById('feedback-message');
+      // Add delay and feedback (2 seconds)
+      if (yesPred && yesPred.probability > 0.95 && !predictionMade) {
+        predictionMade = true;
+        msgEl.textContent = "👍 Yes detected! Redirecting...";
+        await delay(2250);
+        window.location.href = "yes.html";
+      } else if (noPred && noPred.probability > 0.95 && !predictionMade) {
+        predictionMade = true;
+        msgEl.textContent = "👎 No detected! Redirecting...";
+        await delay(2250);
+        window.location.href = "no.html";
+      }
+    }
+  </script>
+</body>
 </html>
