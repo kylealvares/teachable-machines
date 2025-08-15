@@ -213,17 +213,17 @@
       const noPred = prediction.find(p => p.className.toLowerCase() === "no");
       const msgEl = document.getElementById('feedback-message');
 
-      if (yesPred && yesPred.probability > 0.95 && !predictionMade) {
-        predictionMade = true;
-        msgEl.textContent = "👍 Yes detected! Redirecting...";
-        await delay(5000);
-        window.location.href = "yes.html";
-      } else if (noPred && noPred.probability > 0.95 && !predictionMade) {
-        predictionMade = true;
-        msgEl.textContent = "👎 No detected! Redirecting...";
-        await delay(2250);
-        window.location.href = "no.html";
-      }
+      // if (yesPred && yesPred.probability > 0.95 && !predictionMade) {
+      //   predictionMade = true;
+      //   msgEl.textContent = "👍 Yes detected! Redirecting...";
+      //   await delay(5000);
+      //   window.location.href = "yes.html";
+      // } else if (noPred && noPred.probability > 0.95 && !predictionMade) {
+      //   predictionMade = true;
+      //   msgEl.textContent = "👎 No detected! Redirecting...";
+      //   await delay(2250);
+      //   window.location.href = "no.html";
+      // }
     }
   </script>
 </body>
